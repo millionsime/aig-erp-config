@@ -1,0 +1,90 @@
+================================================================================
+AIG ERPNext FOUNDATION - CONFIRMATIONS NEEDED FROM AIG (7 items)
+================================================================================
+Each item below was flagged in the foundation brief as needing an AIG decision.
+For every one, a sensible default was IMPLEMENTED so the system is usable NOW;
+each can be re-pointed in the config layer once AIG answers. Nothing is locked.
+
+--------------------------------------------------------------------------------
+1) EXACT ETHIOPIAN FISCAL YEAR START (brief Section 2)
+   IMPLEMENTED: Hamle 1 - Sene 30 (Gregorian 8 July - 7 July), matching the
+   brief's worked examples: EC FY2019 = 8 Jul 2026 - 7 Jul 2027 (live record
+   "FY 2019 EC (Jul 2026 - Jul 2027)"), EC FY2018 = 8 Jul 2025 - 7 Jul 2026.
+   TO CONFIRM: does AIG Finance actually close its year on Sene 30? Some
+   Ethiopian organizations use Meskerem 1 (11/12 September) instead. If AIG
+   uses Meskerem, the two Fiscal Year records' dates change and the budgets
+   re-point - a 10-minute config fix, but it must happen BEFORE serious
+   opening balances are loaded.
+
+2) SIGN-OFF ON THE CONSOLIDATED CHART OF ACCOUNTS (brief Section 3)
+   IMPLEMENTED: the live instance runs ERPNext's Standard CoA (99 accounts),
+   already consolidated (one Salaries, one Depreciation, control accounts,
+   one Retained Earnings). The 276-account duplicated file was never
+   imported. A consolidation draft (FOUNDATION_COA_REVIEW.txt) is delivered
+   for review.
+   TO CONFIRM: AIG Finance signs off the proposed account structure BEFORE
+   the real books are migrated (opening balances from AIG's actual ledgers).
+   The draft adds enterprise-relevant detail accounts the Standard template
+   lacks (e.g. Bank Service Charges, biological-asset accounts) and shows
+   where each of AIG's legacy accounts maps.
+
+3) WHAT THE FIVE "PAID UP CAPITAL" LINES REPRESENT (brief Section 3.4)
+   IMPLEMENTED: the live Standard CoA has a single "Capital Stock" account,
+   so nothing conflicting was loaded.
+   TO CONFIRM: do the five identical "Paid up capital" lines in AIG's source
+   books represent different SHAREHOLDERS or different TRANCES? Each needs
+   its own clearly named account ("Paid-up Capital - [Shareholder]") before
+   equity opening balances are entered. This answer can only come from AIG.
+
+4) WHICH RETAINED EARNINGS CODE IS AUTHORITATIVE - 30003 OR 3200
+   (brief Section 3.3)
+   IMPLEMENTED: the live CoA has exactly ONE Retained Earnings account
+   (system-named "Retained Earnings - AIG"). No duplication exists to merge.
+   TO CONFIRM: if either legacy code (30003 or 3200) carries a posted
+   balance in AIG's actual books, AIG Finance must state which one is the
+   real accumulated result, so the opening balance migration uses it and the
+   other is written to zero with an explanatory journal entry.
+
+5) BIOLOGICAL ASSET ACCOUNTING POLICY (brief Section 3.6)
+   IMPLEMENTED: an Item Group "Livestock & Biological Assets" exists from the
+   demo layer; NO accounting policy was forced on it. Dairy and Poultry
+   livestock are currently untreated until policy is decided.
+   TO CONFIRM: should livestock be tracked as INVENTORY (IAS 41-style at fair
+   value less costs to sell is NOT native in ERPNext - a fair-value model
+   would need period-end revaluation journals) or as plain stock at cost?
+   Whichever is chosen must be applied IDENTICALLY to Dairy and Poultry, and
+   determines which accounts the CoA draft should activate.
+
+6) ETHIOPIAN-DATE SCOPE - DISPLAY ONLY (brief Section 5.3)
+   IMPLEMENTED: read-only Ethiopic date display on Purchase Order, Journal
+   Entry, Payment Entry, and Attendance (verified conversion algorithm;
+   display fields store nothing). Posting dates, fiscal years, approval
+   deadlines remain Gregorian.
+   TO CONFIRM: AIG leadership accepts this scope. If staff later need the
+   date PICKER and period selection to OPERATE natively in Ethiopian dates,
+   that is a custom development project (core framework JavaScript is
+   involved) outside the "no core changes" constraint - it must be a
+   deliberate leadership decision with an upgrade-maintenance budget, not a
+   silent workaround.
+
+7) COST CENTER NAMING CONVENTION (brief Section 4)
+   IMPLEMENTED: "[Name] - AIG" everywhere (Agro Enterprise - AIG, Dairy Farm
+   - AIG, ...). The " - AIG" suffix comes from ERPNext's company-abbr
+   convention and disambiguates in multi-company futures.
+   TO CONFIRM: AIG accepts the convention and the enterprise grouping (Agro
+   Enterprise / Construction Enterprise / Integrated Service Enterprise; Tech
+   and Engineering on hold; "Construction Projects" as the single CC under
+   Construction, with sub-projects to be tracked in the Project doctype).
+
+--------------------------------------------------------------------------------
+BONUS OPEN ITEMS (not from the 7, flagged for completeness)
+--------------------------------------------------------------------------------
+8) AIG's Company "Domain" field (Agriculture/Manufacturing/Services) is
+   intentionally blank; set it with AIG - it only tunes module suggestions.
+9) Head Office has no Budget yet; AIG Finance must supply the corporate
+   overhead figures before one is created.
+10) The depreciation inheritance test asset (ACC-ASS-2026-00001, "AIG CC
+    TEST - Milk Can") was kept as live evidence of the verification. Say the
+    word and it will be cancelled/removed after Saturday's demo.
+
+--- END OF CONFIRMATIONS ---

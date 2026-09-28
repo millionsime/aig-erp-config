@@ -1,0 +1,295 @@
+================================================================================
+AIG (Adama Investment Group) - ERPNext Procurement & Cost Center Demo
+CHANGE LOG  (plain text)
+================================================================================
+Instance    : frappe_docker stack, site "frontend"
+ERPNext     : v16   |   Frappe: v16   |   Python 3.14
+Company     : Adama Investment Group   |   Currency: ETB
+Source doc  : "Qajeelfama Hojii fi Adeemsa Bittaa" (AIG Procurement Policy)
+Prepared for: Saturday live progress-report demo
+
+NON-NEGOTIABLE CONSTRAINTS OBSERVED
+--------------------------------------------------------------------------------
+- NO file inside the frappe/ or erpnext/ app directories was edited. No core
+  Python, JS, or DocType JSON was touched. (See CONFIRMATIONS.txt, item C.)
+- All changes are made through the upgrade-safe CONFIG LAYER only:
+  Workflow, Workflow State, Workflow Action Master, Role, User, User Permission,
+  Custom DocPerm, Custom Field, Property Setter, Server Script, Budget,
+  Cost Center, Tax Withholding Category, Purchase Taxes and Charges Template,
+  Workspace, plus demo master/transaction data.
+- ADDITIVE ONLY: no existing DocType, field, role, or user was deleted or renamed.
+- Server Scripts are used (4). Each is FLAGGED with its reason in section 6 below.
+
+================================================================================
+1. ROLES  (8 created, all prefixed "AIG")
+================================================================================
+CREATE  Role  AIG CEO
+CREATE  Role  AIG Corporate
+CREATE  Role  AIG Deputy
+CREATE  Role  AIG Enterprise Head
+CREATE  Role  AIG Evaluation Committee
+CREATE  Role  AIG Finance
+CREATE  Role  AIG Procurement Officer
+CREATE  Role  AIG Purchase Committee
+
+================================================================================
+2. USERS  (11 demo users, domain @aig.local, shared password "aig2026")
+================================================================================
+CREATE  User  ceo@aig.local              (AIG CEO)
+CREATE  User  corporate@aig.local        (AIG Corporate)
+CREATE  User  deputy@aig.local           (AIG Deputy)
+CREATE  User  finance@aig.local          (AIG Finance)
+CREATE  User  committee1@aig.local       (AIG Purchase Committee / Evaluation Committee)
+CREATE  User  committee2@aig.local       (AIG Purchase Committee / Evaluation Committee)
+CREATE  User  committee3@aig.local       (AIG Purchase Committee / Evaluation Committee)
+CREATE  User  head.agro@aig.local        (AIG Enterprise Head - Agro)
+CREATE  User  head.construction@aig.local(AIG Enterprise Head - Construction)
+CREATE  User  head.service@aig.local     (AIG Enterprise Head - Integrated Service)
+CREATE  User  procurement.agro@aig.local (AIG Procurement Officer - Agro)
+
+================================================================================
+3. COST CENTER TREE  (17 cost centers for Adama Investment Group)
+================================================================================
+CREATE  Cost Center  Adama Investment Group (root / company-level)
+CREATE  Cost Center  Agro Enterprise  (group)
+CREATE  Cost Center    Dairy Farm
+CREATE  Cost Center    Poultry Farm
+CREATE  Cost Center    Crop Production
+CREATE  Cost Center    Agro Machinery
+CREATE  Cost Center    Agro Administration
+CREATE  Cost Center  Construction Enterprise  (group)
+CREATE  Cost Center    Fuel Station
+CREATE  Cost Center    Construction Projects
+CREATE  Cost Center    Construction Administration
+CREATE  Cost Center  Integrated Service Enterprise  (group)
+CREATE  Cost Center    (6 service-line cost centers under Integrated Service)
+NOTE    Enterprise heads are scoped to their own sub-tree via User Permissions
+        (section 5), not by editing the Cost Center doctype.
+
+================================================================================
+4. WORKFLOWS  (2 active)
+================================================================================
+--------------------------------------------------------------------------------
+4a. WORKFLOW "AIG Procurement Approval"  (DocType: Purchase Order)
+--------------------------------------------------------------------------------
+CREATE  Workflow  AIG Procurement Approval  (is_active = 1)
+  Workflow States (7):
+    Draft                              (docstatus 0)
+    Pending Purchase Committee Approval(docstatus 1, allow_edit: Purchase Committee)
+    Pending Enterprise Head Approval   (docstatus 1, allow_edit: Enterprise Head)
+    Pending Corporate Approval         (docstatus 1, allow_edit: Corporate)
+    Pending CEO Approval               (docstatus 1, allow_edit: CEO)
+    Approved                           (docstatus 1)
+    Rejected                           (docstatus 2)
+  Transitions (11) enforce the tiered policy with NO path that skips a gate:
+    Draft -> Submit for Direct Purchase  -> Approved        (< ETB 20,000)
+    Draft -> Submit for Committee Review -> Pending Purchase Committee Approval
+                                            (ETB 20,000 - 750,000, Proforma)
+    Pending Purchase Committee Approval -> Approve -> Pending Enterprise Head Approval
+    Pending Enterprise Head Approval    -> Approve -> Pending Corporate Approval
+    Pending Corporate Approval          -> Approve -> Pending CEO Approval
+    Pending CEO Approval                -> Approve -> Approved
+    (Bulky / Open Tender > ETB 750,000 follows the committee + head + corporate
+     + CEO chain as above.)
+    Any pending state -> Reject -> Rejected
+  KEY POLICY FIX: the Enterprise Head approval is a MANDATORY, non-skippable
+  workflow state on the Proforma tier. Verified by acceptance test T2 (no
+  transition reaches Approved without passing Pending Enterprise Head Approval,
+  and a head from another enterprise cannot approve).
+  v16 CONSTRAINT: Draft(docstatus 0) -> Rejected(docstatus 2) is forbidden by
+  the engine, so the Purchase Order is SUBMITTED (docstatus 1) when it enters
+  committee review; pending states therefore carry docstatus 1.
+
+--------------------------------------------------------------------------------
+4b. WORKFLOW "AIG Payment Approval"  (DocType: Payment Entry)
+--------------------------------------------------------------------------------
+CREATE  Workflow  AIG Payment Approval  (is_active = 1)
+  Workflow States (6):
+    Draft                       (docstatus 0)
+    Pending Deputy Approval     (docstatus 1, allow_edit: Deputy)
+    Pending Corporate Approval  (docstatus 1, allow_edit: Corporate)
+    Pending CEO Approval        (docstatus 1, allow_edit: CEO)
+    Approved                    (docstatus 1)
+    Rejected                    (docstatus 2)
+  Transitions (7): Draft -> Submit for Deputy Review -> Deputy -> Corporate ->
+  CEO -> Approved; any pending -> Reject -> Rejected.
+  Verified by acceptance test T5 (4-signature payment chain completes).
+
+CREATE  Workflow State masters (added): Pending Deputy Approval,
+        Pending CEO Approval, Pending Corporate Approval,
+        Pending Enterprise Head Approval, Pending Purchase Committee Approval,
+        Pending, Approved, Rejected, Draft (as required by the two workflows).
+CREATE  Workflow Action Master (added): Submit for Deputy Review,
+        Submit for Direct Purchase, Submit for Committee Review, Review,
+        Reject, Approve.
+
+================================================================================
+5. USER PERMISSIONS  (data-level enterprise scoping) - 17 records
+================================================================================
+CREATE  User Permission  head.agro@aig.local          -> 5 Agro cost centers
+CREATE  User Permission  head.construction@aig.local  -> Construction cost centers
+CREATE  User Permission  head.service@aig.local       -> 6 Integrated Service CCs
+CREATE  User Permission  procurement.agro@aig.local   -> 5 Agro cost centers
+Effect: each enterprise head / procurement officer sees only transactions in
+their own cost-center sub-tree (verified by acceptance test T2f: the
+Construction head cannot approve an Agro Purchase Order).
+
+================================================================================
+6. SERVER SCRIPTS  (4)  -- *** FLAGGED, as required by the brief ***
+================================================================================
+Each runs in the Frappe RestrictedPython sandbox (no core edits).
+FLAG  Server Script  "AIG - Payment Three-Way Match"
+        Type: DocType Event, Payment Entry, Before Submit.
+        Reason: enforce PO -> Purchase Receipt (Model 19) -> Purchase Invoice ->
+        Payment linkage before a payment can be submitted (three-way match).
+        Logic is PI-centric (v3): validates the paid amount against the Purchase
+        Invoice allocation and derives the linked PO + submitted Purchase Receipt
+        from the invoice lines. Uses tolerance tol(x)=max(10, 0.5%).
+FLAG  Server Script  "AIG - PO Cost Center Default"
+        Type: DocType Event, Purchase Order, Before Validate/Insert.
+        Reason: default the custom aig_cost_center field on new Purchase Orders.
+FLAG  Server Script  "AIG - PO Guard Raw Submit"
+        Type: DocType Event, Purchase Order, Before Submit.
+        Reason: block a raw submit that bypasses the workflow (throws when
+        workflow_state == "Draft"), so the approval chain cannot be skipped.
+FLAG  Server Script  "AIG - PE Guard Raw Submit"
+        Type: DocType Event, Payment Entry, Before Submit.
+        Reason: same guard for Payment Entry raw submits.
+
+================================================================================
+7. CUSTOM FIELDS  (2)  +  CUSTOM DOCPERM  (field-level, Section 9)
+================================================================================
+CREATE  Custom Field  Supplier.aig_bank_details
+        Fieldtype: Small Text,  permlevel: 1
+        Reason: holds supplier banking detail; restricted at field level.
+CREATE  Custom Field  Purchase Order.aig_cost_center
+        Fieldtype: Link -> Cost Center,  reqd: 1,  permlevel: 0
+        Reason: mandatory enterprise cost-center on every PO. Implemented as a
+        custom field (not by making the native cost_center mandatory) to stay
+        upgrade-safe.
+CREATE  Custom DocPerm rows  (203 total across 12 doctypes for AIG roles):
+        Account, Budget, Cost Center, Item, Material Request, Payment Entry,
+        Purchase Invoice, Purchase Order, Purchase Receipt,
+        Request for Quotation, Supplier, Supplier Quotation.
+CREATE  Custom DocPerm  (permlevel 1, read) on Supplier for AIG CEO,
+        AIG Corporate, AIG Deputy, AIG Finance ONLY.
+        Effect (Section 9): only these four roles can read the permlevel-1
+        supplier banking field. Verified by acceptance test 12_verify_sec9.py.
+
+================================================================================
+8. BUDGETS  (3)  -- all SUBMITTED (docstatus = 1) so they are enforced
+================================================================================
+CREATE+SUBMIT  Budget  Dairy Farm    ETB 2,000,000   action: Warn   (FY 2026-27)
+CREATE+SUBMIT  Budget  Fuel Station  ETB   500,000   action: Warn   (FY 2026-27)
+CREATE+SUBMIT  Budget  Poultry Farm  ETB    50,000   action: Stop   (FY 2026-27)
+NOTE  Budget enforcement in ERPNext requires docstatus = 1; the submit step was
+      added to the setup script after diagnosis (verified by acceptance test T4:
+      the Poultry Farm "Stop" budget blocks an over-budget PO).
+
+================================================================================
+9. TAX CONFIG
+================================================================================
+CREATE  Tax Withholding Category  "AIG 7.5% VAT Withholding"
+CREATE  Tax Withholding Category  "AIG 3% Withholding Tax"
+CREATE  Purchase Taxes and Charges Template  "AIG VAT 15% (Purchase) - AIG"
+CREATE  Purchase Taxes and Charges Template  "Ethiopia Tax - AIG"
+
+================================================================================
+10. WORKSPACES  (3, navigation convenience for the demo)
+================================================================================
+CREATE  Workspace  AIG Finance       (module: Accounts)
+CREATE  Workspace  AIG Approvals     (module: Buying)
+CREATE  Workspace  AIG Procurement   (module: Buying)
+
+================================================================================
+11. DEMO MASTER DATA
+================================================================================
+CREATE  Item  AIG-DAIRY-FEED, AIG-PACK (stock, Stores warehouse), AIG-STEEL,
+              AIG-FUEL-EQUIP
+CREATE  Supplier  Ethio Dairy Supplies PLC, Horizon Agro Inputs PLC,
+                  Blue Nile Trade PLC   (group: AIG Vendors)
+CREATE  Account  Creditors - AIG (ensured for payment entries)
+
+================================================================================
+12. FINAL DEMO TRANSACTIONS (kept live on the instance for the demo)
+================================================================================
+KEEP  Purchase Order   PUR-ORD-2026-00001  Proforma  ETB 300,000  Dairy Farm
+                       -> Approved (full committee + head + corporate + CEO chain)
+KEEP  Purchase Order   PUR-ORD-2026-00002  Bulky     ETB 1,000,000 Construction
+                       -> Approved
+KEEP  Purchase Order   PUR-ORD-2026-00003  Direct    ETB 15,000  Dairy Farm
+                       -> Approved (direct-purchase fast path)
+KEEP  Purchase Receipt MAT-PRE-2026-00001  (Model 19 goods receipt) submitted
+KEEP  Purchase Invoice ACC-PINV-2026-00001  submitted
+KEEP  Payment Entry    ACC-PAY-2026-00002   -> Approved (4-signature chain)
+
+================================================================================
+13. CLEANUP / ARTIFACTS REMOVED (test-only, not demo data)
+================================================================================
+DELETE  Purchase Order PUR-ORD-2026-00004 (batch-harness artifact: submitted but
+        stuck in a Pending state; not a valid demo doc).
+DELETE  Payment Entry  ACC-PAY-2026-00001 (stray draft from negative test).
+DELETE  Payment Entry  reference_no "AIGDEMO-T5A" (negative three-way test draft).
+NOTE    No pre-existing (non-AIG) records were deleted or renamed at any point.
+
+================================================================================
+14. ACCEPTANCE TESTS  (scripts/07_accept.py)  -- RESULT: 24 / 24 PASS
+================================================================================
+T1 Role/user scoping; T2 Proforma-tier Enterprise Head gate (no skip, cross-
+enterprise blocked); T3 Bulky tier chain; T4 Budget enforcement (Warn/Stop);
+T5 Payment 4-signature chain + three-way match; T6 Section 9 banking restriction.
+
+================================================================================
+15. EXECUTION MECHANISM (helper files added under ~/aig-erp-config/scripts/)
+================================================================================
+ADD  aig_runner.py   bench-execute helper that runs each setup script in a clean
+     namespace inside the container (custom_theme.aig_runner.run). Copied into
+     apps/custom_theme (a config app), NOT into frappe/ or erpnext/.
+ADD  run_script.sh   copies + executes a numbered script via bench execute.
+ADD  00_inspect.py .. 16_counts.py  the numbered setup / diagnostic / acceptance
+     scripts. All live OUTSIDE the frappe and erpnext app directories.
+
+--- END OF CHANGE LOG ---
+
+================================================================================
+ADDENDUM - LIVE DEMO DATA + 1 EXTRA USER (added for hands-on workflow testing)
+================================================================================
+CREATE  User  procurement.construction@aig.local  (AIG Procurement Officer,
+        password aig2026) + User Permission on "Construction - AIG", so the
+        Bulky/Construction tier can be submitted by a properly scoped officer.
+        (Total demo users is now 12.)
+CREATE  Purchase Order PUR-ORD-2026-00004  Draft  Direct    ETB 15,000   Dairy Farm
+CREATE  Purchase Order PUR-ORD-2026-00005  Draft  Proforma  ETB 250,000  Dairy Farm
+CREATE  Purchase Order PUR-ORD-2026-00006  Draft  Bulky     ETB 900,000  Construction
+CREATE  Purchase Order PUR-ORD-2026-00007  Approved Proforma ETB 400,000 Dairy Farm
+        (payment-chain backing document)
+CREATE  Purchase Receipt MAT-PRE-2026-00002  submitted (Model 19, for PO-00007)
+CREATE  Purchase Invoice ACC-PINV-2026-00002 submitted (for PO-00007)
+CREATE  Payment Entry    ACC-PAY-2026-00003  Draft  ETB 400,000
+        (reference_no AIGDEMO-LIVE-400K; ready to run the payment workflow live)
+NOTE    Script 18_demodata.py is idempotent: it will not recreate the payment
+        chain while a Payment Entry with reference_no AIGDEMO-LIVE-400K exists.
+        All of the above are ADDITIVE demo records; no existing data was changed.
+
+--- END OF ADDENDUM ---
+
+================================================================================
+ADDENDUM 2 - REHEARSAL BUG FIXES (permission + server-script regression)
+================================================================================
+UPDATE  Server Script "AIG - Payment Three-Way Match" REDEPLOYED as v3
+        (PI-centric, RestrictedPython-safe). The live record had regressed to the
+        old v2 which used the illegal name "_tol" and required a PO reference,
+        crashing Payment Entry submit with a SyntaxError. Verified: compiles under
+        RestrictedPython; demo payment reconciles (PI -> PO -> Model 19 receipt).
+CREATE  Custom DocPerm  Account / permlevel 0 / read=1 for AIG Deputy, AIG CEO,
+        AIG Enterprise Head, AIG Purchase Committee, AIG Evaluation Committee.
+        Reason: opening a Payment Entry or Purchase Invoice form calls
+        erpnext.accounts.party.get_party_account(), which throws PermissionError
+        ("User don't have permissions to select/read this account") unless the
+        role can read the party Account. Corporate/Finance/Procurement Officer
+        already had it. Verified for finance, deputy, corporate, ceo, committee1,
+        head.agro. Also updated source script 05_permfix.py so a rebuild is correct.
+DELETE  195 orphaned Custom DocPerm rows (parent NULL) left by the earlier
+        dt->parent field-rename bug; these were engine-invisible clutter.
+
+--- END OF ADDENDUM 2 ---

@@ -1,0 +1,80 @@
+================================================================================
+AIG ERPNext FOUNDATION - ONE-PAGE SUMMARY (plain language)
+================================================================================
+
+WHAT WAS BUILT
+The accounting foundation underneath your ERPNext (v16) system - company,
+fiscal years, the chart of accounts corrections, the enterprise cost-center
+tree, and the rules that make every balance-sheet number traceable to the
+enterprise that owns it. All of it sits in the safe configuration layer:
+nothing inside the ERPNext or Frappe program code was touched, so a future
+upgrade will not break any of this.
+
+THE COMPANY AND ITS YEARS
+One company: Adama Investment Group (AIG), Ethiopian Birr, Ethiopia. Two
+fiscal years now exist under Ethiopian-labels: "FY 2018 EC (Jul 2025 - Jul
+2026)" and "FY 2019 EC (Jul 2026 - Jul 2027)". The Ethiopian year is in the
+name so staff recognize it; the dates inside are the matching Gregorian
+ranges (8 July to 7 July), which is what the system actually uses.
+NOTE: this assumes the standard Ethiopian-government convention (Hamle 1 to
+Sene 30). AIG Finance must confirm AIG truly starts its year on 1 Hamle -
+some organizations start on Meskerem 1 instead. One confirmation changes
+the dates; nothing else breaks.
+
+THE CHART OF ACCOUNTS
+Good news: the duplicated 276-account file from the data-quality review was
+NEVER imported. The live system runs ERPNext's standard chart (99 accounts),
+which already has what the review asked for: one Salaries, one Depreciation,
+one Bank Charges, customer/vendor control accounts, and exactly one Retained
+Earnings. We fixed one real defect: your bank account (Commercial Bank of
+Ethiopia) had been sitting under LIABILITIES - the wrong side of the balance
+sheet. It now sits under a new "Bank Accounts" group in Assets, with its
+balance intact. A consolidated chart draft is attached for AIG Finance to
+sign off before real opening balances are migrated from the actual books.
+
+THE ENTERPRISE MAP
+The cost-center tree now matches the structure decision exactly, with one
+consistent naming style ([Enterprise] - AIG): Agro Enterprise (Dairy,
+Poultry, Slaughterhouse, Animal Feed Factory), Construction Enterprise
+(Construction Projects), Integrated Service Enterprise (Fuel Station, City
+Mall, Garage, Parking, Cafeteria and Parks), plus Head Office. The stray
+"Main", "Tech" and "Engineering" nodes are switched off (not deleted).
+
+EVERY BALANCE SHEET LINE KNOWS ITS ENTERPRISE (THE BIG ONE)
+Cost Center is now effectively mandatory on purchase invoices, sales
+invoices, payments, and journal-entry lines - with automatic defaults from
+the company so normal work stays fast. This is what makes the per-enterprise
+Balance Sheet work, and it was tested, not assumed:
+  - Depreciation test: a machine tagged to Dairy Farm depreciated itself,
+    and the Accumulated Depreciation entry (a balance-sheet account) carried
+    Dairy Farm's tag automatically. Confirmed in the ledger itself.
+  - Balance Sheet filtered to Dairy Farm shows exactly the Dairy figures;
+    cleared filter shows the correct consolidated total. Both verified
+    against the raw ledger.
+  - Budget Variance: a test expense posted to Dairy appeared as Dairy
+    consumption immediately, and disappeared cleanly when cancelled.
+
+THE ETHIOPIAN CALENDAR - HONEST SCOPE
+Purchase orders, journal entries, payments, and attendance now SHOW the
+Ethiopian (Ge'ez) date next to the working date - e.g. "25 Nehase 2018 EC".
+This is a reference display only. The date the system posts on, the fiscal
+year it lands in, and every approval deadline remain Gregorian. We did not
+modify the program code (the only way to make the date picker itself
+Ethiopian), because that would break on every upgrade. If AIG needs the
+system to natively RUN in Ethiopian dates, that is a separate custom
+development decision for leadership - flagged, not attempted.
+
+PROOF IT WORKS
+A 12-point acceptance suite ran against the live system: 12 of 12 checks
+PASS, including negative tests (a journal entry line without a cost center
+is blocked) and clean-up tests (cancelled test entries leave no trace in
+reports).
+
+SAFETY PROMISE
+No core frappe/erpnext file was modified (verified by scanning both app
+trees for recently changed code files: zero). No existing record was
+deleted; strays were disabled, not removed. Every rename used the standard
+rename mechanism so history, budgets, permissions and references followed
+automatically.
+
+--- END OF FOUNDATION SUMMARY ---

@@ -1,0 +1,226 @@
+================================================================================
+AIG Procurement & Cost Center Demo - LIVE DEMO / TESTING GUIDE
+================================================================================
+Prepared for the Saturday demo. Everything below is already loaded on the
+instance and verified working.
+
+--------------------------------------------------------------------------------
+0. HOW TO LOG IN
+--------------------------------------------------------------------------------
+URL         : http://localhost:8080        (add /app to land on the desk)
+Login page  : http://localhost:8080/login
+Site        : frontend   |   Company: Adama Investment Group   |   Currency: ETB
+Password    : aig2026   (SAME password for every demo user below)
+
+Tip: to switch user fast, log out (avatar menu -> Logout) and log in as the next
+person, OR open a private/incognito window per role so you can keep several
+sessions side by side.
+
+--------------------------------------------------------------------------------
+1. THE DEMO CAST (email / password / what they can do)
+--------------------------------------------------------------------------------
+All passwords are: aig2026
+
+  procurement.agro@aig.local          Procurement Officer - Agro
+                                      Creates & submits Agro purchases (Dairy,
+                                      Poultry, etc.). Sees ONLY Agro records.
+  procurement.construction@aig.local  Procurement Officer - Construction
+                                      Creates & submits Construction purchases.
+                                      Sees ONLY Construction records.
+
+  committee1@aig.local                Purchase Committee Member 1  \
+  committee2@aig.local                Purchase Committee Member 2   > first review gate
+  committee3@aig.local                Purchase Committee Member 3  /
+
+  head.agro@aig.local                 Enterprise Head - Agro         (approves Agro)
+  head.construction@aig.local         Enterprise Head - Construction (approves Construction)
+  head.service@aig.local              Enterprise Head - Integrated Service
+
+  corporate@aig.local                 Corporate - Head Office (big-ticket signatory)
+  deputy@aig.local                    Deputy - Head Office    (first payment signatory)
+  ceo@aig.local                       CEO - AIG               (final signatory)
+  finance@aig.local                   Finance - Head Office   (raises invoices & payments;
+                                                               can read supplier bank details)
+
+  Administrator                       (your back-office/setup login - not part of the story)
+
+--------------------------------------------------------------------------------
+2. THE TWO APPROVAL PIPELINES (what the system enforces)
+--------------------------------------------------------------------------------
+A) PURCHASE ORDER approval - the path depends on the ORDER TOTAL:
+
+   Direct Purchase  (under ETB 20,000)
+       Procurement Officer -> [Submit for Direct Purchase] -> APPROVED
+
+   Proforma  (ETB 20,000 - 750,000)
+       Procurement Officer -> [Submit for Committee Review]
+         -> Purchase Committee -> [Approve]
+         -> ENTERPRISE HEAD -> [Approve] -> APPROVED
+       (The Enterprise Head is the FINAL approver on this tier, and the step
+        cannot be skipped. This is the core policy fix.)
+
+   Bulky / Open Tender  (over ETB 750,000)
+       Procurement Officer -> [Submit for Committee Review]
+         -> Purchase Committee -> [Approve]
+         -> Corporate -> [Approve]
+         -> CEO -> [Approve] -> APPROVED
+
+   At any pending step the approver may instead click [Reject] -> Rejected.
+
+B) PAYMENT ENTRY approval - a 4-signature chain (any amount):
+       Finance -> [Submit for Deputy Review]
+         -> Deputy -> [Approve]
+         -> Corporate -> [Approve]
+         -> CEO -> [Approve] -> APPROVED
+   On submit, a "Three-Way Match" server script checks that the payment is
+   backed by a Purchase Order + a goods receipt (Model 19) + a supplier
+   Purchase Invoice for the same amount. If any leg is missing, submit is blocked.
+
+--------------------------------------------------------------------------------
+3. DEMO DATA ALREADY LOADED (use these exact documents)
+--------------------------------------------------------------------------------
+Ready to drive through the PURCHASE ORDER workflow (currently in DRAFT):
+
+   PUR-ORD-2026-00004   Direct    ETB 15,000    Dairy Farm    (Agro)
+   PUR-ORD-2026-00005   Proforma  ETB 250,000   Dairy Farm    (Agro)
+   PUR-ORD-2026-00006   Bulky     ETB 900,000   Construction
+
+Ready to drive through the PAYMENT workflow (currently in DRAFT):
+
+   ACC-PAY-2026-00003   Payment   ETB 400,000   (Ethio Dairy Supplies PLC)
+      backed by:  PUR-ORD-2026-00007 (Approved) -> MAT-PRE-2026-00002 (Model 19
+                  receipt) -> ACC-PINV-2026-00002 (supplier invoice)
+
+Already-completed examples (to show a finished story without clicking):
+
+   PUR-ORD-2026-00001   Proforma  300,000   Approved
+   PUR-ORD-2026-00002   Bulky     1,000,000 Approved
+   PUR-ORD-2026-00003   Direct    15,000    Approved
+   ACC-PAY-2026-00002   Payment   300,000   Approved
+
+--------------------------------------------------------------------------------
+4. STEP-BY-STEP SCRIPTS (follow in this order)
+--------------------------------------------------------------------------------
+=== SCENARIO 1 - DIRECT PURCHASE (fast path, < 20k) =========================
+ 1. Log in as  procurement.agro@aig.local
+ 2. Open  PUR-ORD-2026-00004  (Buying -> Purchase Order, or /app/purchase-order)
+ 3. Note the state badge = "Draft" and total = ETB 15,000.
+ 4. Click  "Submit for Direct Purchase".
+ 5. State becomes  APPROVED  immediately.  <- shows the small-value shortcut.
+
+=== SCENARIO 2 - PROFORMA (20k-750k, Enterprise Head is the gate) ============
+ 1. Log in as  procurement.agro@aig.local
+ 2. Open  PUR-ORD-2026-00005  (total ETB 250,000). Click "Submit for Committee Review".
+      -> state = "Pending Purchase Committee Approval"
+ 3. Log out. Log in as  committee1@aig.local
+ 4. Open the same PO. Click "Approve".
+      -> state = "Pending Enterprise Head Approval"
+ 5. Log out. Log in as  head.agro@aig.local
+ 6. Open the same PO. Click "Approve".
+      -> state = "APPROVED"   <- Enterprise Head was the final, mandatory gate.
+
+   OPTIONAL PROOF (the "no-skip" + scoping guarantee):
+     - At step 5, instead log in as  head.construction@aig.local  and try to open
+       PUR-ORD-2026-00005: it is NOT visible / cannot be approved, because that
+       head is scoped to Construction only. This proves one enterprise's head
+       cannot approve another enterprise's purchase.
+
+=== SCENARIO 3 - BULKY / OPEN TENDER (> 750k, Corporate + CEO) ===============
+ 1. Log in as  procurement.construction@aig.local
+ 2. Open  PUR-ORD-2026-00006  (total ETB 900,000). Click "Submit for Committee Review".
+      -> state = "Pending Purchase Committee Approval"
+ 3. Log in as  committee2@aig.local -> open it -> "Approve".
+      -> state = "Pending Corporate Approval"   (note: it SKIPS Enterprise Head
+         and goes to Corporate because the value is over 750k)
+ 4. Log in as  corporate@aig.local -> "Approve".
+      -> state = "Pending CEO Approval"
+ 5. Log in as  ceo@aig.local -> "Approve".
+      -> state = "APPROVED"
+
+=== SCENARIO 4 - PAYMENT (4-signature chain + Three-Way Match) ===============
+ 1. Log in as  finance@aig.local
+ 2. Open  ACC-PAY-2026-00003  (Accounts -> Payment Entry). Total ETB 400,000.
+      Show the "References" table: it points at Purchase Invoice ACC-PINV-2026-00002.
+ 3. Click "Submit for Deputy Review".
+      -> The Three-Way Match runs and PASSES (PO + Model 19 receipt + invoice all
+         line up). State = "Pending Deputy Approval".
+ 4. Log in as  deputy@aig.local -> open it -> "Approve".
+      -> "Pending Corporate Approval"
+ 5. Log in as  corporate@aig.local -> "Approve".
+      -> "Pending CEO Approval"
+ 6. Log in as  ceo@aig.local -> "Approve".
+      -> state = "APPROVED"   <- payment released after 4 signatures.
+
+=== SCENARIO 5 - GUARDRAILS (quick "wow" checks) =============================
+ a) THREE-WAY MATCH BLOCKS A BLIND PAYMENT
+    As finance@aig.local, create a NEW Payment Entry against the Bulky PO
+    PUR-ORD-2026-00006 (which has NO goods receipt yet) and try "Submit for
+    Deputy Review". It is REJECTED with "AIG Three-Way Match failed: no submitted
+    Purchase Receipt (Model 19)...".  Then delete the draft.
+
+ b) BUDGET STOP
+    As procurement.agro@aig.local, create a PO for ETB 60,000 with cost center
+    "Poultry Farm" (its budget is ETB 50,000 with action = Stop) and try to
+    "Submit for Committee Review". The submit is BLOCKED by the l;budget.
+
+ c) SUPPLIER BANKING IS RESTRICTED (Section 9)
+    Log in as  head.agro@aig.local  (or any non-finance role), open a Supplier:
+    the bank-details field is NOT readable. Log in as  finance@aig.local  (or
+    corporate/deputy/ceo): the bank-details field IS readable.
+
+--------------------------------------------------------------------------------
+5. RESETTING / RE-RUNNING THE DEMO
+--------------------------------------------------------------------------------
+The demo docs get consumed as you approve them (a Draft becomes Approved). To
+restore fresh Draft documents for another run, execute on the host:
+
+   wsl -d Ubuntu -- bash -lc "docker exec -w /home/frappe/frappe-bench \
+     frappe_docker-backend-1 bench --site frontend execute \
+     custom_theme.aig_runner.run --kwargs \"{'path':'/tmp/18_demodata.py'}\""
+
+Note: script 18 is idempotent - it will not duplicate the payment chain while the
+marker payment (reference_no "AIGDEMO-LIVE-400K") still exists. To fully reset,
+first delete/cancel ACC-PAY-2026-00003 and the draft POs, then re-run.
+
+Alternatively, the fastest reset for live rehearsal is to keep the already-
+APPROVED examples (Section 3, bottom) for "here is a completed flow" and drive
+only ONE Draft document per tier on stage.
+
+--------------------------------------------------------------------------------
+6. TROUBLESHOOTING (seen during rehearsal)
+--------------------------------------------------------------------------------
+Q: "I logged in as a committee member but there is no action button, and I get
+   'User don't have permissions to select/read this account'."
+   TWO separate things, both resolved:
+   (1) WRONG DOCUMENT. The committee approves PURCHASE ORDERS, not payments.
+       The committee has NO role in the Payment Entry workflow, so opening the
+       Payment Entry ACC-PAY-2026-00003 shows no button - that is correct.
+       -> As committee, open the Purchase Order that is "Pending Purchase
+          Committee Approval" (right now PUR-ORD-2026-00005). Approve/Reject
+          appear top-right. Verified: committee1 gets ['Approve','Reject'] there.
+   (2) ACCOUNT PERMISSION (fixed). The account error came from ERPNext's
+       get_party_account(), which runs whenever a Payment Entry or Purchase
+       Invoice form loads its party. The AIG approver roles were missing read
+       permission on the Account doctype. This has been fixed: Account read is
+       now granted to AIG Deputy, CEO, Enterprise Head, Purchase Committee and
+       Evaluation Committee (Corporate/Finance/Procurement already had it).
+       Verified: finance, deputy, corporate, ceo, committee1 and head.agro can
+       all open the party account with no error. 195 orphaned permission rows
+       (left by an earlier build bug) were also cleaned up.
+   NOTE: the payment chain is approved by Finance -> Deputy -> Corporate -> CEO.
+   The committee is not part of it.
+
+Q: Payment submit crashed with '"_tol" is an invalid variable name'.
+   FIXED. The live Three-Way Match Server Script had reverted to an old v2 that
+   used an illegal underscore name and demanded a PO reference. It has been
+   redeployed as v3 (RestrictedPython-safe, PI-centric) and re-verified: the
+   demo payment ACC-PAY-2026-00003 (ETB 400,000) reconciles against invoice
+   ACC-PINV-2026-00002 -> PO PUR-ORD-2026-00007 -> receipt MAT-PRE-2026-00002,
+   and the PE is still in Draft, ready to run live.
+
+Q: I already consumed the Draft docs while testing - how do I get fresh ones?
+   See Section 5 (reset). Current rehearsal state: PUR-ORD-2026-00004 Approved,
+   PUR-ORD-2026-00005 Pending Purchase Committee Approval, PUR-ORD-2026-00006
+   Pending CEO Approval, ACC-PAY-2026-00003 Draft.
+
+--- END OF DEMO GUIDE ---

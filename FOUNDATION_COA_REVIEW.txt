@@ -1,0 +1,132 @@
+================================================================================
+AIG ERPNext FOUNDATION - DRAFT CONSOLIDATED CHART OF ACCOUNTS
+For AIG FINANCE SIGN-OFF (brief Section 3 / Build order step 3)
+================================================================================
+STATUS: DRAFT for review - the live system already runs the "current" tree
+below; PROPOSED additions/changes are NOT yet made. Nothing is imported from
+the legacy 276-account file.
+
+0. WHY THIS LOOKS DIFFERENT FROM THE LEGACY FILE
+The data-quality review found ~276 accounts with duplicates (Salaries x4,
+Depreciation-Building copies, 5 identical "Paid up capital" lines, party
+names as GL accounts, two Retained Earnings codes, malformed codes). ERPNext
+needs ONE natural account per economic thing; the enterprise dimension lives
+in the COST CENTER on each transaction (already enforced), and per-party
+detail lives in Customer/Supplier/Employee masters. The table below is the
+cleaned target; legacy-code mapping happens at migration, not by re-creating
+legacy duplicates.
+
+1. LIVE TREE TODAY (99 accounts, after the foundation fixes)
+Assets
+  Current Assets
+    Accounts Receivable -> Debtors (Receivable)                 [control]
+    Bank Accounts (new group) -> Commercial Bank of Ethiopia    [was under
+                                             Non-Current Liabilities - FIXED]
+    Cash In Hand -> Cash
+    Loans and Advances (Assets) -> Employee Advances, Prepaid Expenses
+    Securities and Deposits -> Earnest Money, Short-term Investments
+    Stock Assets -> Stock In Hand
+    Tax Assets (group; VAT receivable currently under Duties and Taxes - see
+      3.2)
+  Fixed Assets -> Accumulated Depreciation, Buildings, Capital Equipment,
+                  CWIP, Electronic Equipment, Furniture & Fixtures, Office
+                  Equipment, Plants & Machineries, Software
+  Investments
+  Temporary Accounts -> Temporary Opening
+Equity
+  Capital Stock | Dividends Paid | Opening Balance Equity |
+  Retained Earnings (exactly ONE) | Revaluation Surplus
+Expenses
+  Direct Expenses -> Stock Expenses -> COGS, Expenses Included In Valuation,
+                      Stock Adjustment
+  Indirect Expenses -> Administrative, Bank Charges, Commission on Sales,
+                  Depreciation, Entertainment, Exchange Gain/Loss, Freight,
+                  Gain/Loss on Asset Disposal, Impairment, Interest Expense,
+                  Legal, Marketing, Miscellaneous, Office Maintenance,
+                  Office Rent, Postal, Print & Stationery, Round Off, Salary,
+                  Sales Expenses, Tax Expense, Telephone, Travel, Utility,
+                  Write Off
+Income
+  Direct Income -> Sales, Service
+  Indirect Income -> Interest Income, Interest on Fixed Deposits
+Liabilities
+  Current Liabilities
+    Accounts Payable -> Creditors (Payable) [control], Payroll Payable,
+                        Accrued Expenses, Customer Advances
+    Duties and Taxes -> VAT, 3% Withholding Tax Payable,
+                        7.5% VAT Withholding Payable, VAT Receivable
+    Loans (Liabilities) -> Bank Overdraft, Secured, Unsecured,
+                        Short-term Provisions
+    Stock Liabilities -> Asset/Stock Received But Not Billed
+  Non-Current Liabilities -> Employee Benefits Obligation, Long-term
+                             Provisions
+
+2. WHAT ALREADY SATISFIES THE DATA-QUALITY REVIEW (no action)
+- One "Salary", one "Depreciation", one "Accumulated Depreciation", one
+  "Bank Charges" - enterprise split comes from Cost Center (enforced).
+- Debtors / Creditors are CONTROL accounts; party detail lives in
+  Customer/Supplier/Employee masters (ERPNext gives per-party statements).
+- Exactly one Retained Earnings (the 30003/3200 legacy codes map here -
+  pending confirmation #4 on which code carries the real balance).
+- No customer/vendor names exist as GL accounts (acceptance-checked).
+
+3. PROPOSED ADDITIONS (AIG Finance to approve before real books migrate)
+3.1 Bank detail (expected soon): add one Bank-type account per real bank
+    account/branch under "Bank Accounts" (e.g. "CBE - Main Branch", "Awash -
+    ...", "Dashen - ..."). Do not run real payments through a single
+    generic bank ledger.
+3.2 VAT placement: create "VAT Receivable (Input VAT)" under Tax Assets and
+    move/point input VAT there; keep "VAT" (output) under Duties and Taxes.
+    Cleaner net-VAT reporting. (Currently a single "VAT Receivable" sits
+    under Duties and Taxes.)
+3.3 Payroll detail: add natural expense accounts under Indirect Expenses
+    (or a "Payroll Expenses" group): Salary already exists; add "Overtime",
+    "Allowances", "Pension Employer Contribution", "Staff Medical". Add
+    "Pension Fund Payable", "Staff Loan" (asset), per Ethiopian payroll law
+    needs.
+3.4 Capital accounts (pending confirmation #3): replace single "Capital
+    Stock" with labeled accounts per shareholder/tranche, e.g.
+      "Paid-up Capital - [Shareholder A]"
+      "Paid-up Capital - [Shareholder B]"
+      "Paid-in Excess of Par" (if share premium exists)
+    Until answered, Capital Stock stays as the single control account.
+3.5 Dairy/Poultry/biological (pending confirmation #5):
+    IF livestock = inventory at cost: add "Livestock - Dairy" and
+    "Livestock - Poultry" (type Stock) under Stock Assets, plus "Livestock
+    Purchases"/"Livestock Feed" expense accounts; use Inventory doctypes.
+    IF a distinct biological treatment is required (fair value): note ERPNext
+    has no native IAS 41 fair-value model; the pragmatic pattern is
+    inventory accounts + period-end revaluation journals to
+    "Revaluation Surplus"/P&L - a policy decision plus discipline, not new
+    engine capability. ONE policy for both Dairy and Poultry, per the review.
+3.6 Enterprise income detail: add sub-accounts under Sales/Service when
+    AIG wants per-enterprise P&L by product line (optional - Cost Center
+    already gives per-enterprise totals on every income/expense account).
+3.7 Account numbering: v16 ships the tree unnumbered. If AIG wants the
+    5-digit scheme from the review (e.g. 11000 Cash), numbers can be filled
+    in one config pass before go-live; the review's format rule (5 digits,
+    optional short suffix) is endorsed. Not blocking for the demo.
+
+4. LEGACY MAPPING PRINCIPLES (for the migration spreadsheet)
+- N duplicate natural accounts (Salaries x4 etc.) -> the ONE live account;
+  entity distinction = Cost Center on each historical transaction.
+- Party-named GL accounts -> Customer/Supplier/Employee master + the
+  control account; opening per-party balances go into the masters
+  (ERPNext imports party-wise opening balances natively).
+- "Paid up capital" x5 -> per-shareholder accounts once labelled (#3).
+- 30003 / 3200 Retained Earnings -> single RE; authoritative-balance answer
+  needed (#4) before migration.
+- Malformed codes (4-digit, stray decimal, missing digit) -> the 5-digit
+  scheme in 3.7; codes are cosmetic in ERPNext (names are the keys).
+- Every legacy account must map to exactly one live account or one PROPOSED
+  account in section 3; anything unmapped goes to "Temporary Opening" for
+  AIG Finance to triage - never silently dropped.
+
+5. SIGN-OFF ASK
+AIG Finance reviews sections 3 and 4 (the open questions #3, #4, #5 of the
+confirmation list decide 3.4/3.5). On sign-off, the additions are created in
+one config pass, the legacy-migration spreadsheet is built on top of them,
+and opening balances are loaded against this consolidated structure with
+Cost Center set per enterprise.
+
+--- END OF COA REVIEW DRAFT ---

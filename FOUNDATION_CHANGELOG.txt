@@ -1,0 +1,276 @@
+================================================================================
+AIG (Adama Investment Group) - ERPNext FOUNDATION LAYER
+CHANGE LOG (plain text)  -  Companion to CHANGELOG.txt (procurement demo layer)
+================================================================================
+Instance    : frappe_docker stack, site "frontend"
+ERPNext     : v16 | Frappe: v16 | Python 3.14 | MariaDB 11.8
+Company     : Adama Investment Group (abbr AIG) | Currency ETB | Country Ethiopia
+Date        : 25 September 2026
+Source doc  : "ERPNext Foundation for AIG" brief (Sections 0-10)
+Related     : builds on the earlier Procurement & Cost Center demo configuration
+
+NON-NEGOTIABLE CONSTRAINTS OBSERVED
+--------------------------------------------------------------------------------
+- NO file inside apps/frappe/ or apps/erpnext/ was created, edited, or deleted.
+  Proof: scripts/13_corecheck.sh ran after all work - find(1) shows ZERO
+  .py/.js/.json files under apps/frappe or apps/erpnext modified in the last 3
+  days (the entire work window). git status inside those trees: not a repo
+  (image ships without .git), hence the find-based check as before.
+- All changes through the CONFIG LAYER: Fiscal Year, Company settings, Account,
+  Cost Center, Property Setter, Server Script, Client Script, Custom Field
+  (HTML display fields only), Asset Category, Item, Asset, Journal Entry,
+  Budget, Customer (one test customer, removed after the test).
+- ADDITIVE / REVERSIBLE: no transaction data deleted. Renames were done with
+  frappe.model.rename_doc.rename_doc so every cross-reference (GL entries,
+  Budgets, POs, User Permissions) followed automatically. Stray Cost Centers
+  were DISABLED, never deleted.
+
+IMPORTANT CORRECTION TO THE EARLIER CHANGELOG
+--------------------------------------------------------------------------------
+The instance has EVOLVED past the point the old CHANGELOG.txt described (a
+parallel configuration effort added Stock Entry / Material Request scripts,
+new users, and a drafted procurement policy layer). Where the old log and the
+live instance disagreed, THIS log follows the live instance. Old-log items
+still present and untouched: 2 workflows, roles/users, User Permissions,
+supplier-bank permlevel restriction, tax templates, budgets (relabelled FY only).
+
+================================================================================
+A. FISCAL YEARS  (brief Section 2; pending AIG confirmation on Hamle 1)
+================================================================================
+CONVENTION USED (matching the brief's own worked examples):
+  EC fiscal year Y = 8 July (Y+2007) to 7 July (Y+2008). Ergo:
+  - EC 2019 = 8 Jul 2026 - 7 Jul 2027 (Hamle 1, 2018 EC to Sene 30, 2019 EC)
+  - EC 2018 = 8 Jul 2025 - 7 Jul 2026
+CREATE  Fiscal Year  "FY 2018 EC (Jul 2025 - Jul 2026)"   2025-07-08 .. 2026-07-07
+RENAME  Fiscal Year  "2026-27" -> "FY 2019 EC (Jul 2026 - Jul 2027)"
+        (rename_doc with force=True; the record DATES were not touched:
+        2026-07-08 .. 2027-07-07 = exactly EC FY2019 under the convention.
+        rename_doc auto-updated the 4 Budget records that referenced 2026-27.)
+LINK    Both Fiscal Years -> company Adama Investment Group (companies child).
+NOTE    ERPNext is Gregorian-internal; EC labels live in the record names so
+        staff see the Ethiopian year, while all posting math stays Gregorian.
+
+================================================================================
+B. COMPANY SETTINGS  (brief Section 1)
+================================================================================
+UPDATE  Company  Adama Investment Group:
+        default_bank_account = Commercial Bank of Ethiopia - AIG
+        cost_center (Default Cost Center) = Head Office - AIG
+        NOTE v16: the Company fieldname for the default cost center is
+        "cost_center" (label "Default Cost Center"). "default_cost_center"
+        does NOT exist in v16 - an earlier draft of this work set the wrong
+        attribute (silently ignored) and briefly had guard scripts querying
+        the nonexistent column; both were corrected in this same session
+        BEFORE any demo data was posted. Recorded here for transparency.
+UNCHANGED  Company Name, abbr AIG, ETB, Ethiopia, perpetual inventory ON.
+CONFIRM    "Domain" field is blank in v16 (optional); AIG's primary activity
+           should be set later with AIG - it only affects module suggestions.
+
+================================================================================
+C. CHART OF ACCOUNTS  (brief Section 3)
+================================================================================
+KEY FINDING: The live CoA is ERPNext's Standard template (99 accounts) - the
+276-account duplicated AIG source file was NEVER imported. The Standard CoA
+already satisfies the consolidated design: one Salary, one Depreciation,
+one Accumulated Depreciation, one Bank Charges, control accounts (Debtors,
+Creditors), ONE Retained Earnings. No consolidation import was needed.
+Detail + sign-off draft: see FOUNDATION_COA_REVIEW.txt.
+
+CREATE  Account  "Bank Accounts - AIG" (group, type Bank) under Current Assets.
+MOVE    Account  "Commercial Bank of Ethiopia - AIG" from under
+        "Non-Current Liabilities - AIG" (where it had root_type=Liability -
+        a misclassification that would have shown the bank balance on the
+        WRONG SIDE of the Balance Sheet) into "Bank Accounts - AIG".
+        Mechanism: parent re-assignment via API; Account re-derives
+        root_type/report_type from the parent on save. Account NAME unchanged
+        so the existing GL balance (ETB -300,000 credit from demo payments)
+        is preserved; re-verified after the move.
+RESULT  Balance Sheet now shows "Bank Accounts - AIG: ETB -300,000" under
+        Assets (it appeared there correctly in the Build G report run).
+
+================================================================================
+D. COST CENTER TREE  (brief Section 4)
+================================================================================
+All renames via rename_doc (force=True; core doctype has allow_rename=0).
+Cross-references that followed automatically: GL entries, Purchase Orders
+(e.g. PUR-ORD-2026-00006 -> Construction Projects - AIG), Budgets,
+User Permissions.
+
+RENAME  "Agro - AIG"                  -> "Agro Enterprise - AIG" (group)
+RENAME  "Integrated_Service - AIG"    -> "Integrated Service Enterprise - AIG"
+                                  (group; also fixes the underscore naming)
+RENAME  "Construction - AIG" (group)  -> "Construction Projects - AIG" (leaf)
+CREATE  "Construction Enterprise - AIG" (group) under company root;
+        re-parented "Construction Projects - AIG" beneath it.
+        (Brief: construction sub-projects go in Project doctype, not sub-CCs.)
+RENAME  "Guaraj (Garage) - AIG"       -> "Garage - AIG"
+DISABLE "Tech - AIG", "Engineering - AIG", "Main - AIG"  (strays; NOT deleted)
+REPOINT User Permissions of head.construction / procurement.construction from
+        the old group to "Construction Enterprise - AIG".
+
+FINAL TREE (all disabled=0):
+  Adama Investment Group - AIG (root)
+  |- Head Office - AIG
+  |- Agro Enterprise - AIG (group)
+  |    |- Dairy Farm - AIG | Poultry Farm - AIG | Slaughterhouse - AIG
+  |    |- Animal Feed Factory - AIG
+  |- Construction Enterprise - AIG (group)
+  |    |- Construction Projects - AIG (leaf)
+  |- Integrated Service Enterprise - AIG (group)
+       |- Fuel Station | City Mall | Garage | Parking | Cafeteria and Parks
+Tech and Engineering Enterprises: NOT created (on hold per brief).
+
+================================================================================
+E. COST CENTER ON BALANCE-SHEET ACCOUNTS  (brief Section 5.1 - the big one)
+================================================================================
+v16 ENGINE REALITY (verified in source, scripts/42-45):
+1. The "Allow Cost Center In Entries of Balance Sheet Account" setting DOES
+   NOT EXIST in v16 (grep across all of erpnext: zero hits). CC tagging of
+   BS accounts is always permitted in v16. Nothing to enable; the brief's
+   step was written for v13-era behaviour.
+2. GL-level CC enforcement: P&L accounts already REQUIRE a CC natively
+   (gl_entry.pl_must_have_cost_center). BS accounts did not - that is what
+   this build adds, at the transaction layer.
+3. The Accounting Dimension "Mandatory For" mechanism CANNOT be used for
+   Cost Center: accounting_dimension.py validate_doctype() explicitly throws
+   "Not allowed to create accounting dimension for Cost Center" (CC is a
+   built-in dimension). So mandatory-CC is implemented as config-layer
+   enforcement instead - see below.
+
+PROPERTY SETTERS (reqd=1) - 6 records:
+  Payment Entry.cost_center, Sales Invoice.cost_center,
+  Sales Invoice Item.cost_center, Purchase Invoice.cost_center,
+  Purchase Invoice Item.cost_center, Journal Entry Account.cost_center
+  (Payment Entry's native CC field was checked for hidden=0 - it is visible.)
+  Purchase Order/Sales Order CC comes from the demo layer's mandatory custom
+  field (aig_cost_center) + the existing defaulting Server Script.
+
+SERVER SCRIPTS (RestrictedPython sandbox; DocType Event = Before Validate) - 4:
+  "AIG - CC Guard Journal Entry"   defaults row CC from header then Company
+                                   default; throws if any row would post
+                                   without a CC.
+  "AIG - CC Guard Payment Entry"   defaults header CC from Company default;
+                                   throws if still empty (PE CC flows to all
+                                   its GL rows - verified in source).
+  "AIG - CC Guard Sales Invoice"   header/items/taxes default + enforce.
+  "AIG - CC Guard Purchase Invoice" same for purchase side.
+  All four use frappe.db.get_value("Company", doc.company, "cost_center") -
+  the correct v16 fieldname (see note in section B).
+
+BACKFILL: draft Payment Entry ACC-PAY-2026-00003 (demo live-flow doc) had no
+  CC -> set to Head Office - AIG so it passes the new mandatory rule.
+
+NO new custom "Enterprise" dimension was created (brief 5.2). Cost Center IS
+the enterprise dimension. Branch-level tracking noted as a future option.
+
+================================================================================
+F. FIXED ASSET + DEPRECIATION CC INHERITANCE TEST  (brief 5.1.3 - explicit)
+================================================================================
+Purpose: the brief flagged depreciation CC inheritance as "known soft spot -
+verify explicitly, don't assume". VERIFIED PASS.
+CREATE  Asset Category "Dairy Equipment" (Capital Equipment / Accumulated
+        Depreciation / Depreciation / CWIP mapped; 12x monthly straight line).
+CREATE  Item AIG-TEST-MILK-CAN (non-stock fixed asset, category above).
+CREATE+SUBMIT Asset ACC-ASS-2026-00001 "AIG CC TEST - Milk Can",
+        gross/net ETB 50,000, cost_center = Dairy Farm - AIG.
+        (v16: Asset Depreciation Schedule auto-created on submit; posting
+        requires docstatus=1 on both Asset and ADS.)
+RUN     post_depreciation_entries(purchase_date + 1 month).
+RESULT  Journal ACC-JV-2026-00001 (Depreciation Entry, ETB 4,166.67):
+          Accumulated Depreciation - AIG  CR 4,166.67  CC = Dairy Farm - AIG
+          Depreciation - AIG              DR 4,166.67  CC = Dairy Farm - AIG
+        Confirmed at BOTH Journal-row and GL-Entry level. Mechanism (source,
+        asset/depreciation.py:284): the Accumulated Depreciation leg carries
+        the asset's own CC; the expense leg falls back to the dimension
+        default - with the CC dimension row set mandatory_for_bs, the asset's
+        CC is used. Test asset KEPT on the instance as evidence
+        (ACC-ASS-2026-00001; it is demo-harmless, one month of depreciation).
+
+================================================================================
+G. BALANCE SHEET + BUDGET VARIANCE VERIFICATION  (brief 5.1.4 / 6.4)
+================================================================================
+BALANCE SHEET (v16 report supports CC dimension filter via add_dimensions):
+  - Consolidated (no CC filter): Bank -300,000 | Stock 702,200 |
+    Fixed Assets -4,166.67 | Payables 400,000. Correct totals.
+  - Filtered CC = "Dairy Farm - AIG": Stock 702,200 | Fixed Assets -4,166.67
+    - matches the CC-tagged GL EXACTLY, and excludes untagged Cash/Bank.
+  - AR flow test: a submitted JE tagging Debtors - AIG (Customer party) and
+    Sales to Dairy Farm CC showed ETB 2,000 under Accounts Receivable in BOTH
+    the filtered and the consolidated BS; then cancelled cleanly.
+BUDGET VARIANCE REPORT:
+  - Rows per Cost Center: Dairy Farm (1,916,666.67 = annualized COGS budget),
+    Fuel Station (479,166.67), Poultry Farm (47,916.67).
+  - Consumption test: posted labeled test JE ACC-JV-2026-00002
+    (COGS 5,000 DR / Cash 5,000 CR, both CC=Dairy Farm) -> BVR Dairy actual
+    went 0 -> 5,000. Cancelled -> back to 0. Tracking AND cancel-integrity
+    both proven.
+NOTE  Budgets themselves (Dairy 2M / Fuel 500K / Poultry 50K with Warn/Stop
+      actions) were already built by the demo layer; the FY relabel (A) kept
+      them intact. Head Office has no budget yet - listed as open item.
+
+================================================================================
+H. ETHIOPIAN (GE'EZ) DATE DISPLAY  (brief 5.3 - display-only scope)
+================================================================================
+SCOPE: read-only reference display. Operative dates stay Gregorian. No core
+control.js or any other core file touched (that would be the only way to make
+the date PICKER itself Ethiopic, and is explicitly out of scope).
+ALGORITHM: JDN-based Ethiopic conversion, Amete Mihret, leap years = 3 mod 4.
+  Validated BEFORE deploy in scripts/ethiopic_test.js (node):
+  11 named anchors incl. Millennium (1 Meskerem 2000 = 12 Sep 2007),
+  Hamle 1 = 8 Jul, the 11/12-September New Year rule incl. leap-adjacent
+  years, Pagume 5/6 boundaries - plus a 1,826-day round-trip + successor
+  sweep (2025-2029). ALL PASS.
+CREATE  Custom Fields (HTML fieldtype = stores nothing, pure display):
+  Purchase Order.aig_eth_date_display   (after transaction_date)
+  Journal Entry.aig_eth_date_display    (after posting_date)
+  Payment Entry.aig_eth_date_display    (after posting_date)
+  Attendance.aig_eth_date_display       (after attendance_date)
+CREATE  Client Scripts (self-contained; no npm library added to the image):
+  "AIG - Ethiopic Date (Purchase Order)" / "(Journal Entry)" /
+  "(Payment Entry)" / "(Attendance)" - render the Ethiopic equivalent of the
+  operative date on refresh + date change; read-only to the user.
+IF AIG NEEDS NATIVE ETHIOPIC OPERATION: separate custom-development decision
+for AIG leadership - not attempted here (brief 5.3).
+
+================================================================================
+I. EXECUTION MECHANICS (files added under ~/aig-erp-config/scripts/)
+================================================================================
+40_foundation_inspect.py      read-only inspection (Company/FY/CoA/CC/PS/Budget)
+41_foundation_schema.py       v16 schema introspection (Budget/dimension meta)
+42_v16_mechanism_check.py     source greps: settings fieldnames, dimension code
+43_source_regions.py          exact source regions (depreciation/GL/dimensions)
+44_final_checks.py            get_dimensions() + GL CC state
+45_preflight.py               GL trigger, report filters, perms, asset meta
+50_build_a_fiscal_years.py    BUILD A (FYs + company defaults)
+51_fy_state_check.py          read-only state check after failed rename attempt
+52_build_b_coa.py             BUILD B (Bank Accounts group + CBE reclass)
+56_build_c_cost_centers.py    BUILD C (CC tree)
+57_build_d_cc_on_bs.py        BUILD D (Property Setters + guard scripts)
+58_ss_meta_check.py           Server Script v16 schema check (read-only)
+60_build_e_ethiopic.py        BUILD E (display fields + client scripts)
+61_cs_meta_check.py           Client Script meta check (read-only)
+62_build_f_depreciation_test.py  BUILD F (the explicit test; kept as evidence)
+63_asset_cat_meta.py          Asset Category child-table check (read-only)
+64_error_log_check.py         depreciation error-log diagnosis (read-only)
+65_build_g_reports.py         BUILD G (BS per-CC vs consolidated + BVR)
+66_bvr_dump.py                BVR raw columns (read-only)
+67_budget_consumption_test.py consumption post->verify->cancel->verify
+70_acceptance.py              ACCEPTANCE CHECKLIST - 12/12 PASS
+71_salary_check.py            account_name sanity (read-only)
+ethiopic_test.js              Ethiopic conversion test (node; ALL PASS)
+All executed via the existing custom_theme.aig_runner runner (config app,
+not frappe/erpnext).
+
+================================================================================
+J. WHAT WAS DELIBERATELY NOT DONE
+================================================================================
+- No Chart of Accounts import: Standard CoA already consolidated (see C).
+  The consolidated CoA draft is nonetheless delivered for AIG Finance
+  sign-off (FOUNDATION_COA_REVIEW.txt) because the real AIG books migration
+  (opening balances from the actual ledgers) still needs it.
+- No deletion of any pre-existing record. Tech/Engineering/Main CCs disabled.
+- No new Accounting Dimension (redundant with Cost Center).
+- No core-file change of any kind, including date-picker JavaScript.
+- No Budget for Head Office yet (figures must come from AIG Finance).
+
+--- END OF FOUNDATION CHANGE LOG ---

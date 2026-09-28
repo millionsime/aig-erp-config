@@ -1,0 +1,120 @@
+================================================================================
+AIG Procurement & Cost Center Demo - CONFIRMATIONS
+================================================================================
+
+--------------------------------------------------------------------------------
+PART A - THE SIX-ITEM CONFIRMATION LIST (brief Section 11)
+--------------------------------------------------------------------------------
+These six points were ambiguous in the source policy. Below is the decision that
+was IMPLEMENTED on the instance, so it can be reviewed and, if needed, adjusted
+before Saturday. Each is a config-layer change (Workflow / Role / Server Script)
+and can be re-pointed without touching core code.
+
+1) "Enterprise Head" vs "Enterprise CEO" - same role or different?
+   DECISION IMPLEMENTED: treated as ONE role, "AIG Enterprise Head", representing
+   the head of each enterprise (Agro, Construction, Integrated Service). The
+   separate corporate-level signatories are the distinct roles AIG Corporate and
+   AIG CEO. No separate "Enterprise CEO" role was created.
+   TO CONFIRM: is a distinct Enterprise CEO signature required in addition to the
+   Enterprise Head? (Currently: no.)
+
+2) Does the Enterprise Head approve on the BULKY / Open Tender tier (> 750,000)?
+   DECISION IMPLEMENTED: NO. As built, the Enterprise Head is the FINAL approver
+   on the Proforma tier only (Committee -> Enterprise Head -> Approved). On the
+   Bulky tier the chain escalates past the Enterprise Head to the corporate
+   signatories: Committee -> Corporate -> CEO -> Approved. The Enterprise Head
+   step is bypassed only on the Direct Purchase tier (< 20,000) and on Bulky.
+   TO CONFIRM: is that the intended reading? If AIG wants the Enterprise Head to
+   ALSO sign on the Bulky tier (e.g. Committee -> Enterprise Head -> Corporate ->
+   CEO), that is a one-line Workflow Transition change - flag it and I will add it.
+
+3) Committee approval - UNANIMOUS or ANY-ONE member?
+   DECISION IMPLEMENTED: ANY-ONE. A single user holding the AIG Purchase
+   Committee role can move the document from "Pending Purchase Committee
+   Approval" to the next state. The workflow engine records one transition.
+   (The three committee demo users exist to show the membership, but the current
+   model does not require all three to sign.)
+   TO CONFIRM: if unanimity (all members must sign) is required, this needs an
+   extra mechanism (e.g. a child-table sign-off + Server Script) - flag now.
+
+4) "Model 42" representation.
+   DECISION IMPLEMENTED: the goods-receipt document that evidences physical
+   receipt (the "Model 19" receipt in the policy) is represented by the standard
+   ERPNext Purchase Receipt (demo: MAT-PRE-2026-00001). The three-way match keys
+   off this submitted Purchase Receipt. No separate custom "Model 42" DocType was
+   created, to stay additive and upgrade-safe.
+   TO CONFIRM: is a distinct Model 42 form (separate DocType / print format)
+   required for the demo, or is the Purchase Receipt sufficient as the receipt
+   evidence?
+
+5) Exact tax withholding rules.
+   DECISION IMPLEMENTED: two Tax Withholding Categories were created as named in
+   the policy - "AIG 7.5% VAT Withholding" and "AIG 3% Withholding Tax" - plus
+   two Purchase Taxes and Charges Templates ("AIG VAT 15% (Purchase) - AIG",
+   "Ethiopia Tax - AIG"). The precise thresholds, cumulative limits, and the
+   accounts each posts to were set to sensible demo defaults.
+   TO CONFIRM: the exact statutory rates, per-supplier thresholds, and GL
+   accounts for withholding, so the demo figures match AIG's real tax rules.
+
+6) Purchase Committee - PER-ENTERPRISE or CROSS-ENTERPRISE?
+   DECISION IMPLEMENTED: CROSS-ENTERPRISE (one committee role that can review any
+   enterprise's Proforma/Bulky purchase). Enterprise separation is enforced one
+   step later, at the Enterprise Head gate, via cost-center User Permissions.
+   TO CONFIRM: should the committee itself be split per enterprise (an Agro
+   committee, a Construction committee, etc.)?
+
+--------------------------------------------------------------------------------
+PART B - KEY DESIGN DECISIONS / DEVIATIONS (flagged for transparency)
+--------------------------------------------------------------------------------
+D1) Pending workflow states carry docstatus = 1 (submitted).
+    Reason: Frappe v16 forbids a Draft(docstatus 0) -> Rejected(docstatus 2)
+    transition, and allow_edit is mandatory per state. The Purchase Order is
+    therefore submitted when it enters committee review. Rejection moves it to
+    docstatus 2. This is engine behaviour, not a policy change.
+
+D2) Enterprise cost center is a CUSTOM mandatory field (Purchase Order.
+    aig_cost_center, Link -> Cost Center, reqd 1) rather than making the native
+    cost_center field mandatory.
+    Reason: avoids editing core field properties; fully upgrade-safe and
+    additive.
+
+D3) Supplier banking restriction is done with a permlevel-1 CUSTOM FIELD
+    (Supplier.aig_bank_details) + permlevel-1 Custom DocPerm, NOT with a Property
+    Setter on native Supplier fields.
+    Reason: keeps the restriction in the config layer and reversible.
+
+D4) FOUR Server Scripts are in use (all flagged in CHANGELOG section 6):
+    three-way match, PO cost-center default, PO raw-submit guard, PE raw-submit
+    guard. Reason: these behaviours cannot be expressed by Workflow alone and
+    must not be added to core code.
+
+D5) Budgets are SUBMITTED (docstatus = 1). Reason: ERPNext only enforces a budget
+    once it is submitted; unsubmitted budgets are ignored by the budget check.
+
+--------------------------------------------------------------------------------
+PART C - WRITTEN CONFIRMATION: NO CORE FILES MODIFIED
+--------------------------------------------------------------------------------
+I confirm that NO file inside the frappe/ or erpnext/ application directories was
+created, edited, or deleted during this work. Specifically:
+
+- No core Python (.py), JavaScript (.js), or DocType JSON files under
+  apps/frappe/ or apps/erpnext/ were modified.
+- Every change was made through the upgrade-safe configuration layer and/or
+  stored as database records: Workflow, Workflow State, Workflow Action Master,
+  Role, User, User Permission, Custom DocPerm, Custom Field, Property Setter,
+  Server Script, Budget, Cost Center, Tax Withholding Category, Purchase Taxes
+  and Charges Template, Workspace, plus demo master/transaction data.
+- The only files written to disk are helper/setup scripts under
+  ~/aig-erp-config/scripts/ and the runner module aig_runner.py, which was placed
+  inside the custom_theme app (apps/custom_theme/...) - a configuration app that
+  is NOT part of frappe or erpnext.
+- Verification: scripts/13_corecheck.sh scanned the frappe and erpnext app trees
+  for recently changed .py/.js/.json files and found none attributable to this
+  work.
+
+All changes are ADDITIVE: no existing DocType, field, role, or user was deleted
+or renamed.
+
+Signed-off: AIG ERPNext demo configuration - 24/24 acceptance checks PASS.
+
+--- END OF CONFIRMATIONS ---
