@@ -16,8 +16,11 @@ Everything configured as of 2026-09-29 travels in git now. This is the exact ord
 2. **App**: inside backend container `bench get-app https://github.com/millionsime/aig-erp-theme custom_theme && bench --site frontend install-app custom_theme`.
 3. **Sync config**: `bench --site frontend migrate` — fixtures re-apply every time (idempotent). Custom DocTypes come from the app JSON.
 4. **Company data**: create Company `Adama Investment Group` (abbr `AIG`), Chart of Accounts import + fiscal year + users either by restoring the site backup (fastest, carries everything incl. demo data) or running the phase-1 setup scripts `aig_setup_00–08.py` in order.
-5. **Demo data (optional)**: `bench --site frontend execute` the seeder `170_accounting_demo_seed.py` (runbook: `scripts/run_script.sh` pattern) — aborts if markers exist.
-6. **Verify**: run `161_post_migrate_sanity.py` (counts + 4 guards) and `176_enduser_route_verify.py` (10/10). Open `/aig-admin`.
+5. **Global Defaults (desk charts!)**: right after the company exists run script `179_global_defaults.py` — without it every desk dashboard chart (Selling/Buying dashboards) shows **"Company is mandatory"**. It sets default company + currency and clears cache. (Deliberately NOT a fixture: the company must exist first, or migrate would fail on a dangling link.)
+6. **Demo data (optional)**: `bench --site frontend execute` the seeder `170_accounting_demo_seed.py` — aborts if markers exist.
+7. **Verify**: run `161_post_migrate_sanity.py` (counts + 4 guards) and `176_enduser_route_verify.py` (10/10). Open `/aig-admin`.
+6. **Demo data (optional)**: `bench --site frontend execute` the seeder `170_accounting_demo_seed.py` — aborts if markers exist.
+7. **Verify**: run `161_post_migrate_sanity.py` (counts + 4 guards) and `176_enduser_route_verify.py` (10/10). Open `/aig-admin`.
 
 ## What does NOT travel in git
 Users & passwords, naming counters, demo transactions (MR/PO/PR/PI/PE/SI/JE/SR/Budgets), site config (`server_script_enabled`, hosts) — all covered by step 1 config + step 4 backup/seed.
