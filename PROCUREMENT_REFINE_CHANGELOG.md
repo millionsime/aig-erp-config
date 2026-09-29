@@ -106,6 +106,17 @@ Every item is classified as one of:
 - **Companion probes:** `166` (fixture gap analysis) · `167` (fixture verify) · `168/169/169b` (read-only accounting ground truth: accounts, CC/WH trees, guard texts, workflow maps) · `171` (finance PO permission proof).
 - **Reseeding:** the seeder aborts if its markers exist (demo customers / user_remark-tagged JEs). To reset: cancel+delete the seeded docs (they carry the `AIG demo seed` remark or demo names) or restore the pre-seed backup, then rerun 170.
 
+## 9c. End-user purchase policy flip (2026-09-29, scripts 174–177)
+
+Management decision for the client demo: **End Users can now initiate Purchase requests.** New head-first route on Material Request (workflow "AIG Stock Request Approval"):
+
+- **End User** —Submit Purchase Request→ **Pending Head Approval** (new workflow state; doc_status 1; Enterprise Head may edit)
+- **Enterprise Head** —Approve→ **Pending Store Review**
+- **Store Admin** sets the new **Assigned Procurement Officer** field (custom Link field, `allow_on_submit`) then —Approve & Assign→ **Approved** (button condition requires the officer to be set — no anonymous approvals)
+- **PO < 20,000** from the approved MR takes the direct path → **Pending Finance Signoff** → Finance Sign-off → Approved (the 172 perm fix made this executable)
+- Guard changes: phase-1 "MR End User Type Default/Guard" (forced Material Issue conversion) **disabled**; new **"AIG - MR End User Purchase Scope"** allows end users Purchase + Material Issue only. Store buttons type-scoped (Purchase → Approve & Assign; Material Issue → original Approve → Pending Enterprise Approval), preserving the two-step store/enterprise Model 19 control.
+- Officer-raised routes (≤750k direct, >750k endorsement) and Acts 1–8 of the walkthrough unchanged. Verified end-to-end 10/10 by `176_enduser_route_verify.py` (self-cleaning). Walkthrough TRACK B (Acts B1–B4) added. Fixtures re-exported.
+
 ## 10. Known cosmetic behaviour (no action needed)
 
 - Every real traceback from `bench execute` is followed by `NameError: name 'custom_theme' is not defined` — a bench artifact, not a script failure.

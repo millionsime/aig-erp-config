@@ -2,7 +2,7 @@
 
 **Purpose:** a click-by-click script for showcasing the entire AIG procurement & payment flow in ERPNext v16, one user at a time, with the "wow moments" (system-enforced controls) called out so you can pause on them.
 
-**The story you are telling:** Agro buys 10 laptops at ETB 80,000 each = **800,000 net** — a "bulky" purchase that must climb the full ladder: Procurement Officer raises it for an employee (**Requested By** = the end user) → Enterprise Head (endorsement) → Purchase Committee (**one member approves on behalf of all — revised rule, 2026-09-27**) → Corporate → CEO → Store (Model 42) → Finance (VAT) → Payment with double withholding → the books balance themselves.
+**The story you are telling (TODAY, 2026-09-29):** use **TRACK B** first — an employee raises a 15,000 purchase themselves, the Enterprise Head approves, the Store Manager approves and assigns the buyer, the purchaser's small PO gets Finance's sign-off directly. Then **TRACK A** (Acts 1–8) shows the big purchase climbing the full ladder: Procurement Officer raises it for an employee (**Requested By** = the end user) → Enterprise Head (endorsement) → Purchase Committee (**one member approves on behalf of all — revised rule, 2026-09-27**) → Corporate → CEO → Store (Model 42) → Finance (VAT) → Payment with double withholding → the books balance themselves. Finish with the seeded books (income in 9 cost centers, Trial Balance diff 0.00).
 
 **Site:** `frontend` · **Company:** Adama Investment Group · **All passwords:** `aig2026` · **URLs:** `https://<your-host>/app` (web) — every login below lands on the Desk home.
 
@@ -54,6 +54,67 @@ wsl -d Ubuntu -- bash -lc "bash /home/milli/aig-erp-config/scripts/run_script.sh
 | `deputy@aig.local` | aig2026 | Deputy (payment approval) |
 | (corporate / ceo again) | — | Payment approval chain |
 | `auditor@aig.local` | aig2026 | Auditor (closing proof, read-everything) |
+
+---
+
+# TRACK B — End-user-initiated purchase (NEW policy, live 2026-09-29)
+
+> **Supersedes the officer-first note in Act 1.** As of 2026-09-29, End Users CAN raise
+> Purchase requests. New route: End User → **Enterprise Head** → **Store Manager (approves
+> AND assigns the purchaser)** → Purchaser creates the PO → <20,000 PO goes **direct with
+> Finance Sign-off**. Old Material Issue (Model 19) store route and the officer routes
+> (Acts 1–8) still work unchanged. Verified 10/10 by `scripts/176_enduser_route_verify.py`.
+
+## ACT B1 — The request (End User)
+
+**Login:** `enduser.agro@aig.local` / `aig2026`
+
+1. Home → **Buy** → **Material Request List** → **+ Add Material Request**.
+2. Fill exactly:
+   - **Purpose:** `Purchase`  ← now permitted for end users (scope guard allows Purchase or Material Issue only — anything else throws).
+   - **Company:** `Adama Investment Group`
+   - **AIG Cost Center:** `Animal Feed Factory - AIG`
+   - **Estimated Total (ETB):** `15,000`  *(keep below 20,000 so the PO takes the direct path in Act B4)*
+   - **Item table:** `AIG-00001` Managerial Chair, Qty `15`, Rate `1,000`, Warehouse `Animal Feed Plant - AIG`.
+3. **Save** → the workflow button **Submit Purchase Request** appears (this is the NEW end-user purchase button).
+4. Click it → State: **Pending Head Approval**.
+
+**🎤 WOW:** *"The same employee can raise two kinds of requests: a Model 19 stock issue routes to the store; a purchase routes to the enterprise head. I never choose the route — the request type routes itself. And if I tried a 'Manufacture' or 'Transfer' request, the system would refuse — end users raise purchases or stock issues, nothing else."*
+
+## ACT B2 — The Enterprise Head approves (head.agro@aig.local)
+
+**Login:** `head.agro@aig.local` / `aig2026`
+
+1. Open the request (Pending Head Approval) → buttons **Approve** / **Reject**.
+2. Click **Approve** → State: **Pending Store Review**.
+
+**🎤 WOW:** *"Separation of duties is structural: the person who asked can never approve their own request — the guard blocks it even at this desk. And the head does not choose the buyer: approval just moves it to stores."*
+
+## ACT B3 — Store Manager approves AND assigns the purchaser (storeadmin.agro@aig.local)
+
+**Login:** `storeadmin.agro@aig.local` / `aig2026`
+
+1. Open the request → scroll to **Assigned Procurement Officer**.
+2. Pick `procurement.agro@aig.local`.
+3. The button **Approve & Assign** only exists because an officer is selected — that's the control. Click it.
+4. State: **Approved**, with the buyer's name stamped on the request.
+
+**🎤 WOW:** *"No anonymous purchases. Stores cannot approve without naming the purchaser, and the purchaser is now on the record — permanently."* (Optional negative: clear the field — the button disappears.)
+
+## ACT B4 — The purchaser creates the PO < 20,000 (procurement.agro@aig.local)
+
+**Login:** `procurement.agro@aig.local` / `aig2026`
+
+1. Open the Approved request → **Create → Purchase Order** (links the MR automatically).
+2. Supplier: `Blue Nile Trade PLC`; confirm the row (Qty 15 × 1,000 = 15,000) → **Save**.
+3. The button shows **Submit for Direct Purchase** — it appears precisely because the PO is under 20,000. Click it.
+4. State: **Pending Finance Signoff**.
+
+**Login:** `finance@aig.local` / `aig2026` → open the PO → **Finance Sign-off** → State: **Approved**.
+
+**🎤 WOW (the amount contrast):** *"Same officer, two destinies: this 15,000 PO needed only Finance's sign-off — but change one digit to 25,000 and the committee, and past 750,000 the Corporate CEO ladder appears (Track A). The buttons ARE the policy."*
+
+> **Continue the story:** from here the Track B PO flows through Acts 5–8 unchanged (receipt + Model 42 → VAT invoice → payment chain → GL proof). Or jump to the accounting finale with the seeded books.
 
 ---
 
@@ -213,6 +274,9 @@ State is **Pending Corporate Approval**.
 
 | # | Gate | User who trips it | Where in the demo |
 |---|---|---|---|
+| 0 | **End User CAN raise Purchase requests** — head-first route (2026-09-29 policy); store must name the buyer to approve | enduser.agro → head.agro → storeadmin.agro | Acts B1–B3 |
+| 0b | End users raise **Purchase or Material Issue only** — other types throw | enduser.agro | Act B1 wow |
+| 0c | **PO < 20,000 → direct path with Finance Sign-off** (committee only ≥ 20,000) | procurement.agro → finance | Act B4 |
 | 1 | > 750,000 MR needs Enterprise-Head endorsement (officer has no bypass button) | procurement.agro | Act 2 |
 | 2 | < 750,000 MR approves directly | procurement.agro | Act 1 optional |
 | 3 | **ONE committee click approves for all (auto-recorded sign-off)**; rejection = row + click by TWO members | committee1 (+ committee2 for the reject demo) | Act 3 |
