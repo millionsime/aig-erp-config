@@ -76,11 +76,11 @@ for r in roots:
 
 log("  spot checks:")
 for label, filt in [
-    ("AIG CBE bank", {"account_number": "1110.12"}),
-    ("VAT Payable 15%", {"account_number": "2131"}),
-    ("Trade Creditors control", {"account_number": "2101"}),
-    ("Trade Debtors control", {"account_number": "1201"}),
-    ("Depreciation group", {"account_number": "5700"}),
+    ("AIG CBE bank", {"account_number": "11012"}),
+    ("VAT Payable 15%", {"account_number": "21402"}),
+    ("Trade Creditors control", {"account_number": "21100"}),
+    ("Trade Debtors control", {"account_number": "12300"}),
+    ("Depreciation group", {"account_number": "60600"}),
 ]:
     row = frappe.db.get_value(
         "Account",

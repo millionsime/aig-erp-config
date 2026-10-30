@@ -1,8 +1,8 @@
-# 84_wire_new_coa.py -- Post-import wiring for the new AIG CoA.
+# 84_wire_new_coa.py -- Post-import wiring for the new AIG CoA (v2 numbering:
+# 5-digit 10000..60700 per AIG_Corrected_Demo_CoA.csv).
 #
-# The importer's set_default_accounts() auto-detection picked wrong/odd
-# defaults (e.g. default_payable_account = Lease Liabilities 2304,
-# default_income_account = Sales - Dairy Products 4101). Also:
+# The importer's set_default_accounts() auto-detection picks only
+# receivable/payable/provisional; other defaults get re-pointed here. Also:
 #   * Purchase/Sales Taxes templates and Tax Withholding Categories lost
 #     their account rows (importer deleted rows referencing old accounts)
 #   * Warehouse.account was nulled during the transaction purge
@@ -29,15 +29,15 @@ log("=" * 70)
 log("COMPANY DEFAULT ACCOUNTS")
 
 targets = {
-    "default_bank_account": acc("1110.12"),      # AIG CBE Account (main bank)
-    "default_cash_account": acc("1101.01"),      # Petty Cash custodian leaf
-    "default_receivable_account": acc("1201"),   # Trade Debtors - Control
-    "default_payable_account": acc("2101"),      # Trade Creditors - Control
+    "default_bank_account": acc("11012"),         # AIG CBE Account (main bank)
+    "default_cash_account": acc("10001"),         # Petty Cash custodian leaf
+    "default_receivable_account": acc("12300"),   # Trade Debtors - Control
+    "default_payable_account": acc("21100"),      # Trade Creditors - Control
 }
 
 # optional fields that may or may not exist in this version
 OPTIONAL = {
-    "default_inventory_account": acc("1304"),    # Spare Parts & Consumables
+    "default_inventory_account": acc("13104"),   # Spare Parts & Consumables
     "round_off_account": frappe.db.get_value(
         "Account", {"company": COMPANY, "name": ("like", "Round Off%")}, "name"
     ),
@@ -65,7 +65,7 @@ for k in sorted(all_fields):
         log(f"    {k}: {before[k]}")
 
 # wrong auto-picks that must not survive
-if before.get("default_income_account") == acc("4101"):
+if before.get("default_income_account") == acc("40101"):
     updates_income_clear = True
 else:
     updates_income_clear = False
@@ -90,14 +90,14 @@ if updates_income_clear:
 log("=" * 70)
 log("WAREHOUSE ACCOUNTS")
 RULES = [
-    (("raw", "feed"), "1301"),
-    (("wip", "staging", "receiving", "transit"), "1302"),
-    (("finish", "goods"), "1303"),
-    (("spare", "consum", "main store"), "1304"),
-    (("fuel", "lubric"), "1305"),
-    (("livestock", "biological"), "1306"),
+    (("raw", "feed"), "13101"),
+    (("wip", "staging", "receiving", "transit"), "13102"),
+    (("finish", "goods"), "13103"),
+    (("spare", "consum", "main store"), "13104"),
+    (("fuel", "lubric"), "13105"),
+    (("livestock", "biological"), "13106"),
 ]
-DEFAULT_INV = "1304"
+DEFAULT_INV = "13104"
 for wh in frappe.get_all(
     "Warehouse",
     filters={"company": COMPANY},
@@ -120,9 +120,9 @@ for wh in frappe.get_all(
 # --------------------------------------------------- tax templates / TWC
 log("=" * 70)
 log("PURCHASE TAXES AND CHARGES TEMPLATES")
-vat15 = acc("2131")
-vatwh75 = acc("2132")
-wht3 = acc("2133")
+vat15 = acc("21402")
+vatwh75 = acc("21401")
+wht3 = acc("21403")
 
 
 def row_accounts_ok(doc):
@@ -191,11 +191,11 @@ for name in frappe.get_all("Tax Withholding Category", pluck="name"):
 log("=" * 70)
 log("VERIFICATION")
 acct_count = frappe.db.count("Account", {"company": COMPANY})
-by_root = frappe.get_all(
-    "Account", filters={"company": COMPANY},
-    fields=["root_type", "count(name) as n"], group_by="root_type",
+by_root = frappe.db.sql(
+    "select root_type, count(name) as n from `tabAccount` where company=%s group by root_type",
+    (COMPANY,), as_dict=1,
 )
-log(f"  Accounts: {acct_count}  by root: " + ", ".join(f"{r.root_type or '?'}={r.n}" for r in by_root))
+log(f"  Accounts: {acct_count}  by root: " + ", ".join(f"{r['root_type'] or '?'}={r['n']}" for r in by_root))
 
 extra = frappe.get_all(
     "Account",

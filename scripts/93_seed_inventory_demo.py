@@ -12,9 +12,9 @@ SEED = {
     "AIG-INV-FEED": [("Dairy Farm Store - AIG", 500, 40.0)],
     "AIG-PACK": [("Main Store - AIG", 2000, 5.0)],
 }
-EXPENSE_MAP = {  # new CoA account numbers
-    "AIG-INV-FEED": "5103",   # Feed & Veterinary Costs
-    "AIG-PACK": "5107",       # Other Direct Costs
+EXPENSE_MAP = {  # new CoA account numbers (v2 5-digit scheme)
+    "AIG-INV-FEED": "50103",  # Feed & Veterinary Costs
+    "AIG-PACK": "50107",      # Other Direct Costs
 }
 
 
@@ -68,7 +68,7 @@ for item, rows in SEED.items():
             "aig_reason_note": "Demo seed after Phase-2 purge (CoA import). Reversible via cancel.",
             # Opening Stock requires an Asset/Liability difference account;
             # Equity/Retained Earnings is the standard opening-balance offset.
-            "expense_account": acc("3002"),
+            "expense_account": acc("30003"),  # Retained Earnings
             "items": [{"item_code": item, "warehouse": wh, "qty": qty, "valuation_rate": rate}],
         })
         sr.insert(ignore_permissions=True)

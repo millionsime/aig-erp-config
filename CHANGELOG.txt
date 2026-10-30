@@ -293,3 +293,39 @@ DELETE  195 orphaned Custom DocPerm rows (parent NULL) left by the earlier
         dt->parent field-rename bug; these were engine-invisible clutter.
 
 --- END OF ADDENDUM 2 ---
+================================================================================
+ADDENDUM 3 - CHART OF ACCOUNTS OVERRIDE (v2 renumbering, live import)
+================================================================================
+SOURCE   "AIG_Corrected_Demo_CoA (2).csv" (user-provided, 175 accounts).
+         Replaces the old 174-account file; AIG_Corrected_Demo_CoA.csv in the
+         repo root now carries the v2 numbering (5-digit 10000..60700).
+         Zero account numbers are shared with the v1 tree, so the swap required
+         a full re-import (ERPNext importer deletes + rebuilds the whole tree).
+LIVE     Site "frontend" / Company "Adama Investment Group", 2026-10-06.
+         Sequence: site backup 20261006_121824 -> 80 purge (demo txns removed)
+         -> 81 preflight (gate passed) -> 83 import (177 -> 177) -> 84 wiring
+         -> 86 repair -> 85 health -> GL smoke test (JE posted, verified,
+         reversed; ledgers back to 0).
+IMPORTED Roots: Application Of Funds(Assets) / Sources Of Funds(Liabilities) /
+         Equity / Income / Expenses (unnumbered roots, per the CSV).
+KEY      Bank 11012 AIG CBE | Cash 10001 | Receivable 12300 | Payable 21100 |
+         Inventory 13104 | VAT 15% 21402 | VAT WH 7.5% 21401 | WHT 3% 21403 |
+         Retained Earnings 30003 | Depreciation group 60600.
+CREATED  50108 Stock Adjustment (account_type Stock Adjustment) under 50000
+         Cost of Sales, wired to company.stock_adjustment_account.
+         Round Off under Expenses root, wired to company.round_off_account.
+         Both are ERPNext runtime requirements absent from the CSV.
+CLEARED  default_income_account left empty on purpose (per-item / per-item-group
+         income accounts are the intended mechanism).
+WIRED    19 warehouses -> inventory accounts 13101..13106 by name rules.
+         Ethiopia Tax templates: single VAT 15% row -> 21402. TWCs: 21401/21403.
+         Mode of Payment "Cash" -> 10001 (auto re-created on company save).
+UPDATED  Scripts re-pointed to v2 numbers: 83 spot checks, 84 defaults/rules,
+         86 repair + SA/Round-Off steps + count expectations (177/6 unnumbered),
+         93 expense map (50103/50107) + opening offset (30003). Fixed 84's
+         v16-invalid "count(name)" field query that crashed its verification.
+EFFECT   Demo transactions (POs, invoices, JEs, payments, stock recon, budgets)
+         purged by the import gate and NOT re-seeded. Re-run 93 (stock seed),
+         140/170 (demo seed) and 03 (budgets) to rebuild the Saturday demo.
+
+--- END OF ADDENDUM 3 ---
