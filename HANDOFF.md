@@ -71,6 +71,8 @@ bash scripts/run_script.sh scripts/84_wire_new_coa.py
 bash scripts/run_script.sh scripts/86_repair_post_import.py
 bash scripts/run_script.sh scripts/191_coa_stock_defaults.py
 bash scripts/run_script.sh scripts/192_coa_warehouse_accounts.py
+bash scripts/run_script.sh scripts/194_company_foundation.py           # fiscal years, cost centers (from aig_hr), company CC
+bash scripts/run_script.sh scripts/195_org_structure.py                 # needs aig_hr installed: 52 units + their cost centers
 ~/aig-erpnext-infra/scripts/dev.sh exec -T backend bench --site frontend execute custom_theme.aig_custom_theme.setup.ensure_tax_setup.run
 bash scripts/run_script.sh scripts/85_coa_health.py
 bash scripts/run_script.sh scripts/193_core_untouched.py                 # expect 0
@@ -83,7 +85,7 @@ bash scripts/run_script.sh scripts/193_core_untouched.py                 # expec
 
 1. Merge the two PRs (section 3) and confirm TEST DATA appears on the server.
 2. Merge `aig-erp-config` PR `feature/coa-219` (CoA scripts 190–193 + 219-row CSV).
-3. Create the enterprise cost centers (expected 18; list still to be supplied by the user).
+3. Install the aig_hr app (fork at millionsime/aig_hr), then run 194 + 195. Source of truth for org units and cost centers: aig_hr/data/*.json.
 4. Decide `Expense Claims - AIG` (HRMS re-creates it unnumbered under 60900) — keep, or add a proper payable account and repoint Expense Claim Types.
 5. Capture Selling/Buying/Stock/Accounts Settings (singles) — careful, some hold company-specific links.
 6. Run the core-untouched check on laptop and server (`docker diff` on backend for `apps/frappe|erpnext|hrms`).
