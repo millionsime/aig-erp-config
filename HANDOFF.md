@@ -62,14 +62,27 @@ Housekeeping on the laptop: infra `main` had an unpushed Codebuff commit `2590ea
 - Company defaults: bank 11012, cash 10001, receivable 12300, payable 21100, inventory 13103, stock adjustment 50108, default expense 50101, round off "Round Off - AIG"; tax templates → 21402 VAT 15%; withholding: 7.5% → 21401, 3% → 21403 (via `custom_theme.aig_custom_theme.setup.ensure_tax_setup.run`).
 - Warehouse→account intended mapping: WIP 13102, Finished Goods 13103, Stores 13104, Goods In Transit 13101 (placeholder), All Warehouses 13104.
 
-**Not yet in git** (exist only on the laptop, written during the chat): `82_unlink_default_accounts.py`, `82b_unlink_all_default_accounts.py`, `82c_clear_mop.py`, `87_stock_defaults.py`, `88_stock_accounts_and_warehouses.py`, the 219-row CSV. Their numbers COLLIDE with existing repo scripts (`82_masters_check`, `87_final_touch`, `88_login_page_fix`). Renumber (e.g. 100–105) before committing. The repo's `AIG_Corrected_Demo_CoA.csv` is still the old 174-row chart.
+**In git (branch `feature/coa-219`)** — the order to rebuild the chart on any site:
+```bash
+cd ~/aig-erp-config
+bash scripts/run_script.sh scripts/190_coa_unlink_default_accounts.py   # must end "remaining links: 0"
+bash scripts/run_script.sh scripts/83_import_coa.py                      # imports AIG_Corrected_Demo_CoA.csv (219 rows)
+bash scripts/run_script.sh scripts/84_wire_new_coa.py
+bash scripts/run_script.sh scripts/86_repair_post_import.py
+bash scripts/run_script.sh scripts/191_coa_stock_defaults.py
+bash scripts/run_script.sh scripts/192_coa_warehouse_accounts.py
+~/aig-erpnext-infra/scripts/dev.sh exec -T backend bench --site frontend execute custom_theme.aig_custom_theme.setup.ensure_tax_setup.run
+bash scripts/run_script.sh scripts/85_coa_health.py
+bash scripts/run_script.sh scripts/193_core_untouched.py                 # expect 0
+```
+`run_script.sh` now finds the container through `dev.sh` and copies the CSV in for you.
 
 **Server:** CoA not touched. Before running any CoA script there: backup, and confirm GL Entry count is 0.
 
 ## 5. Next work, in order
 
 1. Merge the two PRs (section 3) and confirm TEST DATA appears on the server.
-2. Commit the CoA scripts + 219-row CSV to `aig-erp-config` under new numbers.
+2. Merge `aig-erp-config` PR `feature/coa-219` (CoA scripts 190–193 + 219-row CSV).
 3. Create the enterprise cost centers (expected 18; list still to be supplied by the user).
 4. Decide `Expense Claims - AIG` (HRMS re-creates it unnumbered under 60900) — keep, or add a proper payable account and repoint Expense Claim Types.
 5. Capture Selling/Buying/Stock/Accounts Settings (singles) — careful, some hold company-specific links.
