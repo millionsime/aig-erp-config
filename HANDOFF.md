@@ -72,7 +72,7 @@ bash scripts/run_script.sh scripts/86_repair_post_import.py
 bash scripts/run_script.sh scripts/191_coa_stock_defaults.py
 bash scripts/run_script.sh scripts/192_coa_warehouse_accounts.py
 bash scripts/run_script.sh scripts/194_company_foundation.py           # fiscal years, cost centers (from aig_hr), company CC
-bash scripts/run_script.sh scripts/195_org_structure.py                 # needs aig_hr installed: 52 units + their cost centers
+bash scripts/run_script.sh scripts/195_org_structure.py                 # needs aig_hr installed: 51 units + their cost centers
 ~/aig-erpnext-infra/scripts/dev.sh exec -T backend bench --site frontend execute custom_theme.aig_custom_theme.setup.ensure_tax_setup.run
 bash scripts/run_script.sh scripts/85_coa_health.py
 bash scripts/run_script.sh scripts/193_core_untouched.py                 # expect 0
