@@ -25,7 +25,9 @@ and stop at each **CHECKPOINT** for review.
 5. **Stay in scope.** Only the areas listed in section 3. If a task needs a
    change in `custom_theme`, `aig_hr`, the calendar app or infra, report it
    and stop.
-6. Create `knowledge.md` (agent rules, copy from `aig-erp-config/knowledge.md`)
+6. AIG's stock, asset and procurement papers are background, not tasks: see
+   `docs/agent-briefs/reference-documents.md` for what to adopt and what not.
+7. Create `knowledge.md` (agent rules, copy from `aig-erp-config/knowledge.md`)
    at the repo root as the first commit.
 
 ## 1. Context
@@ -42,7 +44,7 @@ and stop at each **CHECKPOINT** for review.
   (`aig_hr/data/*.json`); default cost center `1.1 - Head Office - General - AIG`.
 - Every value this app sets is a **management decision** recorded in the
   doc "AIG Finance Default Accounts: Decisions for Management", referenced as
-  `D-01`…`D-31` and `P-1`…`P-9`. Until management signs, those entries are
+  `D-01`…`D-31` and `P-1`…`P-10`. Until management signs, those entries are
   `pending_decision` and are not applied.
 
 ## 2. Naming and conventions
@@ -71,7 +73,7 @@ format with the repo's pre-commit (ruff). Tabs for indentation, as Frappe apps d
 
 | Area | Records | Decision refs |
 | --- | --- | --- |
-| Chart additions | the 12 new accounts in section 11 of the decision paper | D-03…D-31 |
+| Chart additions | the 13 new accounts in section 11 of the decision paper | D-03…D-31 |
 | Company accounting defaults | the Company fields in section 5 below | D-01…D-31 |
 | Fiscal years | EFY Hamle 1 – Sene 30 | P-1 |
 | Accounting periods / month lock | monthly Accounting Periods, frozen-entries role | P-3 |
